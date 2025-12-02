@@ -1,0 +1,129 @@
+<LoginScreen>:
+    FloatLayout:
+        canvas.before:
+            Color:
+                rgba: 0.1, 0.1, 0.1, 1 
+            Rectangle:
+                pos: self.pos
+                size: self.size
+        
+        MDLabel:
+            text: "HabitTracker"
+            font_style: "H4"
+            bold: True
+            halign: "center"
+            size_hint: None, None
+            size: 250, 50
+            pos_hint: {'center_x': 0.5, 'top': 0.88}
+
+        MDLabel:
+            text: "Iniciar Sesión"
+            font_size: "18sp"
+            bold: True
+            halign: "center"
+            size_hint: None, None
+            size: 200, 40
+            pos_hint: {'center_x': 0.5, 'top': 0.82}
+            theme_text_color: "Custom"
+            text_color: 0, 0.9686, 1, 1
+        
+        MDLabel:
+            id: error_form
+            text: ""
+            theme_text_color: "Error"
+            halign: "center"
+            size_hint_y: None
+            pos_hint: {'center_x': 0.5, 'center_y': 0.73}
+            height: 25
+
+        BoxLayout:
+            orientation: 'vertical'
+            size_hint: 0.85, None
+            height: 230
+            spacing: 12
+            pos_hint: {'center_x': 0.5, 'center_y': 0.49}
+            
+            MDLabel:
+                text: "Email"
+                font_size: "14sp"
+                size_hint_y: None
+                height: 20
+                theme_text_color: "Custom"
+                text_color: 1, 1, 1, 1
+            
+            TextInput:
+                id: email
+                hint_text: "Ingresa tu correo"
+                size_hint_y: None
+                height: 45
+                background_color: 0.2, 0.2, 0.2, 1  # Fondo oscuro
+                foreground_color: 1, 1, 1, 1  # Texto blanco
+                cursor_color: 1, 1, 1, 1
+                padding: [15, 10]
+                font_size: '16sp'
+                multiline: False
+            
+            Widget:
+                size_hint: None, None
+                size: 280, 10 
+                pos_hint: {'center_x': 0.5, 'center_y': 0.53}
+            
+            MDLabel:
+                text: "Contraseña"
+                font_size: "14sp"
+                size_hint_y: None
+                height: 20
+                theme_text_color: "Custom"
+                text_color: 1, 1, 1, 1
+            
+            TextInput:
+                id: contrasena
+                hint_text: "*******"
+                password: True
+                size_hint_y: None
+                height: 45
+                height: 45
+                background_color: 0.2, 0.2, 0.2, 1 
+                foreground_color: 1, 1, 1, 1 
+                cursor_color: 1, 1, 1, 1
+                padding: [15, 10]
+                font_size: '16sp'
+                multiline: False
+            
+            Widget:
+                size_hint: None, None
+                size: 280, 10 
+                pos_hint: {'center_x': 0.5, 'center_y': 0.33}
+            
+            MDRaisedButton:
+                text: "Iniciar Sesión"
+                md_bg_color: 0, 0.9686, 1, 1
+                text_color: 0, 0, 0, 1
+                theme_text_color: "Custom"
+                size_hint: 1, None
+                on_release: root.login()
+
+        BoxLayout:
+            orientation: 'horizontal'
+            size_hint: None, None
+            size: 250, 40
+            pos_hint: {'center_x': 0.5, 'center_y': 0.28}
+            
+            MDLabel:
+                text: "¿No tienes cuenta?"
+                font_style: "Body2"
+                size_hint_x: 0.6
+                halign: "center"
+                theme_text_color: "Custom"
+                text_color: 0.4, 0.4, 0.4, 1
+            
+            MDTextButton:
+                text: "Regístrate"
+                font_size: "14sp"
+                size_hint_x: 0.4
+                halign: "center"
+                theme_text_color: "Custom"
+                text_color: 0, 0.9686, 1, 1
+                bold: True
+                pos_hint: {"center_y": 0.5}
+                on_release: root.go_to_registro()
