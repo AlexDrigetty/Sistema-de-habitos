@@ -24,11 +24,10 @@ class LoginScreen(MDScreen):
             return
         
         # Intentar login con la base de datos
-        result = self.app.db.login_user(email, password)
+        result = self.app.base_datos.iniciar_sesion(email, password)
         
-        if result["success"]:
-            # Guardar usuario en la app principal
-            self.app.current_user = result["user"]
+        if result["exito"]:
+            self.app.usuario_actual = result["usuario"]
             self.ids.error_form.text = "" 
             self.manager.current = 'inicio'
             self.manager.transition = SlideTransition(direction='left')

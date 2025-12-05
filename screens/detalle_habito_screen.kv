@@ -1,0 +1,467 @@
+#:kivy 2.0.0
+#:import dp kivy.metrics.dp
+#:import ScrollEffect kivy.effects.scroll.ScrollEffect
+
+<DetalleHabitoScreen>:
+    ScrollView:
+        effect_cls: ScrollEffect
+        do_scroll_x: False
+        
+        FloatLayout:
+            size_hint_y: None
+            height: dp(1070) 
+            
+            # Header con botón volver y título - POSICIÓN FIJA
+            BoxLayout:
+                orientation: 'horizontal'
+                size_hint: 0.9, None
+                height: dp(60)
+                pos_hint: {'center_x': 0.5, 'top': 0.99}
+                spacing: dp(10)
+                
+                MDIconButton:
+                    icon: "arrow-left"
+                    theme_text_color: "Custom"
+                    text_color: 0, 0.97, 1, 1
+                    on_release: root.volver_atras()
+                
+                BoxLayout:
+                    orientation: 'vertical'
+                    spacing: dp(2)
+                    
+                    MDLabel:
+                        id: nombre_habito
+                        text: "Nombre del Hábito"
+                        font_style: "H6"
+                        bold: True
+                        theme_text_color: "Custom"
+                        text_color: 1, 1, 1, 1
+                        size_hint_y: None
+                        height: dp(15)
+                        halign: "left"
+                    
+                    MDLabel:
+                        id: descripcion_habito
+                        text: ""
+                        font_style: "Caption"
+                        theme_text_color: "Custom"
+                        text_color: 0.7, 0.7, 0.7, 1
+                        size_hint_y: None
+                        height: dp(20)
+                        halign: "left"
+            
+            # Barra de progreso diario - POSICIÓN FIJA
+            MDCard:
+                size_hint: 0.9, None
+                height: dp(120)
+                pos_hint: {'center_x': 0.5, 'top': 0.91}
+                orientation: 'vertical'
+                padding: dp(20)
+                spacing: dp(15)
+                radius: dp(15)
+                md_bg_color: 0.12, 0.16, 0.23, 1
+                elevation: 10
+                
+                MDLabel:
+                    text: "Progreso Diario"
+                    font_style: "H6"
+                    bold: True
+                    theme_text_color: "Custom"
+                    text_color: 1, 1, 1, 1
+                    size_hint_y: None
+                    height: dp(25)
+                
+                BoxLayout:
+                    orientation: 'horizontal'
+                    size_hint_y: None
+                    height: dp(25)
+                    
+                    MDLabel:
+                        id: progreso_minutos
+                        text: "0/30 min"
+                        font_style: "Subtitle1"
+                        theme_text_color: "Custom"
+                        text_color: 0.7, 0.7, 0.7, 1
+                        size_hint_x: 0.6
+                    
+                    MDLabel:
+                        id: progreso_texto
+                        text: "0%"
+                        font_style: "H6"
+                        bold: True
+                        halign: "right"
+                        theme_text_color: "Custom"
+                        text_color: 0, 0.97, 1, 1
+                        size_hint_x: 0.4
+                
+                ProgressBar:
+                    id: barra_progreso
+                    max: 100
+                    value: 0
+                    size_hint_y: None
+                    height: dp(10)
+            
+            # Sección de estadísticas - POSICIÓN FIJA
+            MDCard:
+                size_hint: 0.9, None
+                height: dp(250)
+                pos_hint: {'center_x': 0.5, 'top': 0.75}
+                orientation: 'vertical'
+                padding: dp(25)
+                spacing: dp(18)
+                radius: dp(15)
+                md_bg_color: 0.12, 0.16, 0.23, 1
+                elevation: 10
+                
+                MDLabel:
+                    text: "Estadísticas"
+                    font_style: "H6"
+                    bold: True
+                    theme_text_color: "Custom"
+                    text_color: 1, 1, 1, 1
+                    size_hint_y: None
+                    height: dp(50)
+                
+                # Grid de estadísticas
+                GridLayout:
+                    cols: 2
+                    spacing: dp(25)
+                    size_hint_y: None
+                    height: dp(200)
+                    
+                    # Tarjeta Hoy
+                    MDCard:
+                        orientation: 'vertical'
+                        padding: dp(12)
+                        spacing: dp(5)
+                        radius: dp(12)
+                        md_bg_color: 0.15, 0.2, 0.28, 1
+                        
+                        MDLabel:
+                            text: "Hoy"
+                            font_style: "Subtitle1"
+                            theme_text_color: "Custom"
+                            text_color: 0.16, 0.73, 0.51, 1
+                            size_hint_y: None
+                            height: dp(20)
+                            halign: "center"
+                            bold: True
+                        
+                        MDLabel:
+                            id: hoy_valor
+                            text: "0m"
+                            font_style: "H5"
+                            bold: True
+                            theme_text_color: "Custom"
+                            text_color: 1, 1, 1, 1
+                            size_hint_y: None
+                            height: dp(40)
+                            halign: "center"
+                        
+                        MDLabel:
+                            text: "Minutos hoy"
+                            font_style: "Caption"
+                            theme_text_color: "Custom"
+                            text_color: 0.6, 0.6, 0.6, 1
+                            size_hint_y: None
+                            height: dp(20)
+                            halign: "center"
+                    
+                    # Tarjeta Total
+                    MDCard:
+                        orientation: 'vertical'
+                        padding: dp(12)
+                        spacing: dp(5)
+                        radius: dp(12)
+                        md_bg_color: 0.15, 0.2, 0.28, 1
+                        
+                        MDLabel:
+                            text: "Total"
+                            font_style: "Subtitle1"
+                            theme_text_color: "Custom"
+                            text_color: 0.23, 0.51, 0.96, 1
+                            size_hint_y: None
+                            height: dp(20)
+                            halign: "center"
+                            bold: True
+                        
+                        MDLabel:
+                            id: total_valor
+                            text: "0m"
+                            font_style: "H5"
+                            bold: True
+                            theme_text_color: "Custom"
+                            text_color: 1, 1, 1, 1
+                            size_hint_y: None
+                            height: dp(40)
+                            halign: "center"
+                        
+                        MDLabel:
+                            text: "Minutos total"
+                            font_style: "Caption"
+                            theme_text_color: "Custom"
+                            text_color: 0.6, 0.6, 0.6, 1
+                            size_hint_y: None
+                            height: dp(20)
+                            halign: "center"
+                    
+                    # Tarjeta Racha
+                    MDCard:
+                        orientation: 'vertical'
+                        padding: dp(12)
+                        spacing: dp(5)
+                        radius: dp(12)
+                        md_bg_color: 0.15, 0.2, 0.28, 1
+                        
+                        MDLabel:
+                            text: "Racha"
+                            font_style: "Subtitle1"
+                            theme_text_color: "Custom"
+                            text_color: 1, 0.65, 0, 1
+                            size_hint_y: None
+                            height: dp(20)
+                            halign: "center"
+                            bold: True
+                        
+                        MDLabel:
+                            id: racha_valor
+                            text: "0d"
+                            font_style: "H5"
+                            bold: True
+                            theme_text_color: "Custom"
+                            text_color: 1, 1, 1, 1
+                            size_hint_y: None
+                            height: dp(40)
+                            halign: "center"
+                        
+                        MDLabel:
+                            text: "Días seguidos"
+                            font_style: "Caption"
+                            theme_text_color: "Custom"
+                            text_color: 0.6, 0.6, 0.6, 1
+                            size_hint_y: None
+                            height: dp(20)
+                            halign: "center"
+                    
+                    # Tarjeta Promedio
+                    MDCard:
+                        orientation: 'vertical'
+                        padding: dp(12)
+                        spacing: dp(5)
+                        radius: dp(12)
+                        md_bg_color: 0.15, 0.2, 0.28, 1
+                        
+                        MDLabel:
+                            text: "Promedio"
+                            font_style: "Subtitle1"
+                            theme_text_color: "Custom"
+                            text_color: 0, 0.97, 1, 1
+                            size_hint_y: None
+                            height: dp(20)
+                            halign: "center"
+                            bold: True
+                        
+                        MDLabel:
+                            id: promedio_valor
+                            text: "0m"
+                            font_style: "H5"
+                            bold: True
+                            theme_text_color: "Custom"
+                            text_color: 1, 1, 1, 1
+                            size_hint_y: None
+                            height: dp(40)
+                            halign: "center"
+                        
+                        MDLabel:
+                            text: "Por sesión"
+                            font_style: "Caption"
+                            theme_text_color: "Custom"
+                            text_color: 0.6, 0.6, 0.6, 1
+                            size_hint_y: None
+                            height: dp(20)
+                            halign: "center"
+            
+            # Sección de temporizador - POSICIÓN FIJA
+            MDCard:
+                size_hint: 0.9, None
+                height: dp(190)
+                pos_hint: {'center_x': 0.5, 'top': 0.47}
+                orientation: 'vertical'
+                padding: dp(25)
+                spacing: dp(18)
+                radius: dp(15)
+                md_bg_color: 0.12, 0.16, 0.23, 1
+                elevation: 10
+                
+                MDLabel:
+                    text: "Temporizador de Sesión"
+                    font_style: "H6"
+                    bold: True
+                    theme_text_color: "Custom"
+                    text_color: 1, 1, 1, 1
+                    size_hint_y: None
+                    height: dp(35)
+                
+                # Display del tiempo
+                MDCard:
+                    orientation: 'vertical'
+                    padding: dp(10)
+                    radius: dp(10)
+                    md_bg_color: 0.15, 0.2, 0.28, 1
+                    size_hint_y: None
+                    height: dp(80)
+                    
+                    MDLabel:
+                        id: display_tiempo
+                        text: "00:00:00"
+                        font_style: "H4"
+                        bold: True
+                        halign: "center"
+                        theme_text_color: "Custom"
+                        text_color: 0, 0.97, 1, 1
+                        size_hint_y: None
+                        height: dp(60)
+                        valign: "middle"
+                
+                # Botones del temporizador
+                BoxLayout:
+                    orientation: 'horizontal'
+                    spacing: dp(15)
+                    size_hint_y: None
+                    height: dp(50)
+                    
+                    MDRaisedButton:
+                        id: boton_iniciar
+                        text: "COMENZAR SESIÓN"
+                        md_bg_color: 0, 0.97, 1, 1
+                        size_hint_x: 0.6
+                        font_style: "Button"
+                        theme_text_color: "Custom"
+                        text_color: 0, 0, 0, 1
+                        on_release: root.iniciar_temporizador()
+                    
+                    MDRaisedButton:
+                        id: boton_detener
+                        text: "FINALIZAR"
+                        md_bg_color: 1, 0.3, 0.3, 1
+                        size_hint_x: 0.4
+                        disabled: True
+                        font_style: "Button"
+                        theme_text_color: "Custom"
+                        text_color: 1, 1, 1, 1
+                        on_release: root.detener_temporizador()
+            
+            # Sección de recordatorio - POSICIÓN FIJA
+            MDCard:
+                size_hint: 0.9, None
+                height: dp(220)
+                pos_hint: {'center_x': 0.5, 'top': 0.23}
+                orientation: 'vertical'
+                padding: dp(25)
+                spacing: dp(18)
+                radius: dp(15)
+                md_bg_color: 0.12, 0.16, 0.23, 1
+                elevation: 10
+                
+                MDLabel:
+                    text: "Recordatorio"
+                    font_style: "H6"
+                    bold: True
+                    theme_text_color: "Custom"
+                    text_color: 1, 1, 1, 1
+                    size_hint_y: None
+                    height: dp(35)
+                
+                # Botones ACTIVAR/DESACTIVAR
+                BoxLayout:
+                    orientation: 'horizontal'
+                    spacing: dp(10)
+                    size_hint_y: None
+                    height: dp(40)
+                    
+                    MDFlatButton:
+                        id: boton_activar
+                        text: "ACTIVAR"
+                        theme_text_color: "Custom"
+                        text_color: 0.16, 0.73, 0.51, 1
+                        size_hint_x: 0.5
+                        font_style: "Button"
+                        bold: True
+                        on_release: root.activar_recordatorio(True)
+                    
+                    MDFlatButton:
+                        id: boton_desactivar
+                        text: "DESACTIVAR"
+                        theme_text_color: "Custom"
+                        text_color: 1, 0.3, 0.3, 1
+                        size_hint_x: 0.5
+                        font_style: "Button"
+                        bold: True
+                        on_release: root.activar_recordatorio(False)
+                
+                # Campos de hora
+                BoxLayout:
+                    orientation: 'horizontal'
+                    spacing: dp(15)
+                    size_hint_y: None
+                    height: dp(70)
+                    
+                    BoxLayout:
+                        orientation: 'vertical'
+                        spacing: dp(5)
+                        
+                        MDLabel:
+                            text: "Hora inicio"
+                            font_style: "Caption"
+                            theme_text_color: "Custom"
+                            text_color: 0.7, 0.7, 0.7, 1
+                            size_hint_y: None
+                            height: dp(20)
+                        
+                        MDTextField:
+                            id: campo_hora_inicio
+                            hint_text: "HH:MM"
+                            mode: "rectangle"
+                            size_hint_y: None
+                            height: dp(45)
+                            hint_text_color: 0.5, 0.5, 0.5, 1
+                            foreground_color: 1, 1, 1, 1
+                    
+                    BoxLayout:
+                        orientation: 'vertical'
+                        spacing: dp(5)
+                        
+                        MDLabel:
+                            text: "Hora fin"
+                            font_style: "Caption"
+                            theme_text_color: "Custom"
+                            text_color: 0.7, 0.7, 0.7, 1
+                            size_hint_y: None
+                            height: dp(20)
+                        
+                        MDTextField:
+                            id: campo_hora_fin
+                            hint_text: "HH:MM"
+                            mode: "rectangle"
+                            size_hint_y: None
+                            height: dp(45)
+                            hint_text_color: 0.5, 0.5, 0.5, 1
+                            foreground_color: 1, 1, 1, 1
+                
+                # Botón Guardar Horario
+                MDRaisedButton:
+                    text: "GUARDAR HORARIO"
+                    md_bg_color: 0.23, 0.51, 0.96, 1
+                    size_hint_y: None
+                    height: dp(48)
+                    font_style: "Button"
+                    theme_text_color: "Custom"
+                    text_color: 1, 1, 1, 1
+                    bold: True
+                    on_release: root.guardar_recordatorio()
+            
+            # Espacio al final para scroll
+            Widget:
+                size_hint_y: None
+                height: dp(50)
+                pos_hint: {'center_x': 0.5, 'y': 0.01}

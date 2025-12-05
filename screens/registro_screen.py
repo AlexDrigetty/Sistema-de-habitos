@@ -54,9 +54,9 @@ class RegisterScreen(MDScreen):
         contrasena = self.ids.contrasena.text
         
         # Registrar usuario
-        result = self.app.db.registrar_user(username, email, contrasena)
+        result = self.app.base_datos.registrar_usuario(username, email, contrasena)
         
-        if result["success"]:
+        if result["exito"]:
             self.show_success("¡Registro exitoso!\nAhora puedes iniciar sesión")
         else:
             self.ids.error_form.text = result["message"]

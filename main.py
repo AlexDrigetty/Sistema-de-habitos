@@ -2,11 +2,14 @@ from kivy.lang import Builder
 from kivymd.app import MDApp
 from kivy.core.window import Window
 from kivy.uix.screenmanager import ScreenManager, SlideTransition
+from kivy.core.text import LabelBase
+import os
 
-from database import Database
+from database import BaseDatos
 from screens.login_screen import LoginScreen
 from screens.registro_screen import RegisterScreen
 from screens.inicio_screen import InicioScreen
+from screens.detalle_habito_screen import DetalleHabitoScreen  # NUEVO NOMBRE
 
 Window.size = (360, 640)
 
@@ -14,57 +17,72 @@ class HabitTrackerApp(MDApp):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         
-        # Inicializar base de datos
         try:
-            self.db = Database()
+            self.base_datos = BaseDatos()
+            print("✅ Base de datos conectada")
         except Exception as e:
-            print(f"No se pudo conectar a la base de datos: {e}")
+            print(f"❌ No se pudo conectar a la base de datos: {e}")
             exit(1)
         
-        # Variables de estado
-        self.current_user = None
-        self.screen_manager = ScreenManager()
+        self.usuario_actual = None
+        self.habito_seleccionado = None
+        self.gestor_pantallas = ScreenManager()
     
     def build(self):
+        # REGISTRAR FUENTE DE ICONOS
+        try:
+            ruta_actual = os.path.dirname(os.path.abspath(__file__))
+            ruta_fuente = os.path.join(ruta_actual, "assets", "materialdesignicons-webfont.ttf")
+            
+            if os.path.exists(ruta_fuente):
+                LabelBase.register(name="MaterialDesignIcons", fn_regular=ruta_fuente)
+                print("✅ Fuente de iconos registrada")
+            else:
+                print("⚠️ No se encontró la fuente de iconos")
+                # Usar iconos de texto si no hay fuente
+        except Exception as e:
+            print(f"⚠️ Error al registrar fuente: {e}")
+        
         self.theme_cls.theme_style = "Dark"
         self.theme_cls.primary_palette = "Teal"
         
-        # Cargar archivos kv
         self.cargar_archivos_kv()
         
-        # Crear pantallas
-        login_screen = LoginScreen(name='login')
-        register_screen = RegisterScreen(name='registro')
-        main_screen = InicioScreen(name='inicio')
+        pantalla_login = LoginScreen(name='login')
+        pantalla_registro = RegisterScreen(name='registro')
+        pantalla_inicio = InicioScreen(name='inicio')
+        pantalla_detalle = DetalleHabitoScreen(name='detalle_habito')  # NUEVO NOMBRE
         
-        # Pasar referencia de la app a las pantallas
-        login_screen.app = self
-        register_screen.app = self
-        main_screen.app = self
+        pantalla_login.app = self
+        pantalla_registro.app = self
+        pantalla_inicio.app = self
+        pantalla_detalle.app = self
         
-        # Agregar pantallas al manager
-        self.screen_manager.add_widget(login_screen)
-        self.screen_manager.add_widget(register_screen)
-        self.screen_manager.add_widget(main_screen)
+        self.gestor_pantallas.add_widget(pantalla_login)
+        self.gestor_pantallas.add_widget(pantalla_registro)
+        self.gestor_pantallas.add_widget(pantalla_inicio)
+        self.gestor_pantallas.add_widget(pantalla_detalle)
         
-        return self.screen_manager
+        return self.gestor_pantallas
     
     def cargar_archivos_kv(self):
         Builder.load_file('screens/login_screen.kv')
         Builder.load_file('screens/registro_screen.kv')
         Builder.load_file('screens/inicio_screen.kv')
+        Builder.load_file('screens/detalle_habito_screen.kv')  # CARGAR EL NUEVO KV
     
-    def cambiar_pantallas(self, screen_name, direction='left'):
-        self.screen_manager.transition = SlideTransition(direction=direction)
-        self.screen_manager.current = screen_name
+    def cambiar_pantalla(self, nombre_pantalla, direccion='left'):
+        self.gestor_pantallas.transition = SlideTransition(direction=direccion)
+        self.gestor_pantallas.current = nombre_pantalla
     
-    def logout(self):
-        self.current_user = None
-        self.cambiar_pantallas('login', direction='right')
+    def cerrar_sesion(self):
+        self.usuario_actual = None
+        self.habito_seleccionado = None
+        self.cambiar_pantalla('login', direccion='right')
     
     def on_stop(self):
-        if hasattr(self, 'db'):
-            self.db.close()
+        if hasattr(self, 'base_datos'):
+            self.base_datos.cerrar_conexion()
         return super().on_stop()
 
 if __name__ == '__main__':

@@ -1,8 +1,9 @@
 import psycopg2
 import bcrypt
 from psycopg2.extras import RealDictCursor
+from datetime import datetime, timedelta
 
-class Database:
+class BaseDatos:
     def __init__(self):
         self.conn = psycopg2.connect(
             host="localhost",
@@ -12,180 +13,446 @@ class Database:
             port="5432",
         )
         self.cursor = self.conn.cursor(cursor_factory=RealDictCursor)
-        print("conectado")
+        print("Conectado a la base de datos")
         self.crear_tablas()
 
     def crear_tablas(self):
         try:
-            # tabla de usuarios
+            # Tabla de usuarios
             self.cursor.execute("""
                 CREATE TABLE IF NOT EXISTS usuarios (
                     id SERIAL PRIMARY KEY,
-                    username VARCHAR(50) UNIQUE NOT NULL,
+                    nombre_usuario VARCHAR(50) UNIQUE NOT NULL,
                     email VARCHAR(100) UNIQUE NOT NULL,
                     contrasena VARCHAR(255) NOT NULL,
-                    fecha_crea TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
-            # tabla de hábitos
+            
+            # Tabla de hábitos
             self.cursor.execute("""
                 CREATE TABLE IF NOT EXISTS habitos (
                     id SERIAL PRIMARY KEY,
-                    user_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
-                    titulo VARCHAR(100) NOT NULL,
-                    fecha_crea TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    usuario_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+                    nombre VARCHAR(100) NOT NULL,
+                    descripcion TEXT,
+                    objetivo_diario_minutos INTEGER DEFAULT 30,
+                    categoria VARCHAR(50) DEFAULT 'Salud',
+                    icono VARCHAR(50) DEFAULT 'run',
+                    color VARCHAR(20) DEFAULT '#3b82f6',
+                    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
-            # tabla de progreso diario
+            
+            # Tabla de sesiones
             self.cursor.execute("""
-                CREATE TABLE IF NOT EXISTS progreso_habitos (
+                CREATE TABLE IF NOT EXISTS sesiones (
                     id SERIAL PRIMARY KEY,
                     habito_id INTEGER NOT NULL REFERENCES habitos(id) ON DELETE CASCADE,
                     fecha DATE NOT NULL DEFAULT CURRENT_DATE,
-                    realizadas BOOLEAN NOT NULL DEFAULT TRUE,
-                    UNIQUE(habito_id, fecha)
+                    hora_inicio TIMESTAMP,
+                    hora_fin TIMESTAMP,
+                    duracion_segundos INTEGER NOT NULL,
+                    completada BOOLEAN DEFAULT TRUE,
+                    notas TEXT,
+                    UNIQUE(habito_id, fecha, hora_inicio)
                 )
             """)
-            # índice
+            
+            # Tabla de recordatorios
             self.cursor.execute("""
-                CREATE INDEX IF NOT EXISTS idx_users_username ON usuarios(username)
+                CREATE TABLE IF NOT EXISTS recordatorios (
+                    id SERIAL PRIMARY KEY,
+                    habito_id INTEGER NOT NULL REFERENCES habitos(id) ON DELETE CASCADE,
+                    activo BOOLEAN DEFAULT FALSE,
+                    hora_inicio TIME,
+                    hora_fin TIME
+                )
             """)
+            
+            # Índices para mejor rendimiento
+            self.cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_usuarios_email ON usuarios(email)
+            """)
+            self.cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_habitos_usuario ON habitos(usuario_id)
+            """)
+            
             self.conn.commit()
-            print("tablas creadas")
+            print("Tablas creadas exitosamente")
+            
         except Exception as e:
             self.conn.rollback()
             print(f"Error creando tablas: {e}")
 
-    # Auth 
-    def hash_contrasena(self, password):
-        salt = bcrypt.gensalt()
-        hashed = bcrypt.hashpw(password.encode("utf-8"), salt)
-        return hashed.decode("utf-8")
+    # =================== MÉTODOS DE USUARIOS ===================
+    def encriptar_contrasena(self, contrasena):
+        sal = bcrypt.gensalt()
+        encriptada = bcrypt.hashpw(contrasena.encode("utf-8"), sal)
+        return encriptada.decode("utf-8")
 
-    def verificar_contrasena(self, password, hashed_password):
+    def verificar_contrasena(self, contrasena, contrasena_encriptada):
         try:
-            return bcrypt.checkpw(password.encode("utf-8"), hashed_password.encode("utf-8"))
+            return bcrypt.checkpw(contrasena.encode("utf-8"), contrasena_encriptada.encode("utf-8"))
         except Exception:
             return False
 
-    def registrar_user(self, username, email, password):
+    def registrar_usuario(self, nombre_usuario, email, contrasena):
         try:
             self.cursor.execute(
-                "SELECT id FROM usuarios WHERE username=%s OR email=%s",
-                (username, email),
+                "SELECT id FROM usuarios WHERE nombre_usuario=%s OR email=%s",
+                (nombre_usuario, email),
             )
             if self.cursor.fetchone():
-                return {"success": False, "message": "Usuario o email ya existen"}
+                return {"exito": False, "mensaje": "Usuario o email ya existen"}
 
-            contrasena = self.hash_contrasena(password)
+            contrasena_encriptada = self.encriptar_contrasena(contrasena)
             self.cursor.execute("""
-                INSERT INTO usuarios (username, email, contrasena)
+                INSERT INTO usuarios (nombre_usuario, email, contrasena)
                 VALUES (%s, %s, %s)
-                RETURNING id, username, email, fecha_crea
-            """, (username, email, contrasena))
-            user = self.cursor.fetchone()
+                RETURNING id, nombre_usuario, email, fecha_creacion
+            """, (nombre_usuario, email, contrasena_encriptada))
+            usuario = self.cursor.fetchone()
             self.conn.commit()
-            print(f"Usuario registrado: {username}")
-            return {"success": True, "user": user}
+            print(f"Usuario registrado: {nombre_usuario}")
+            return {"exito": True, "usuario": usuario}
         except Exception as e:
             self.conn.rollback()
-            return {"success": False, "message": str(e)}
+            return {"exito": False, "mensaje": str(e)}
 
-    def login_user(self, username_or_email, password):
+    def iniciar_sesion(self, usuario_o_email, contrasena):
         try:
             self.cursor.execute("""
-                SELECT id, username, email, contrasena
+                SELECT id, nombre_usuario, email, contrasena
                 FROM usuarios
-                WHERE username=%s OR email=%s
-            """, (username_or_email, username_or_email))
-            user = self.cursor.fetchone()
-            if not user:
-                return {"success": False, "message": "Usuario no encontrado"}
+                WHERE nombre_usuario=%s OR email=%s
+            """, (usuario_o_email, usuario_o_email))
+            usuario = self.cursor.fetchone()
+            if not usuario:
+                return {"exito": False, "mensaje": "Usuario no encontrado"}
 
-            if self.verificar_contrasena(password, user["contrasena"]):
-                return {"success": True, "user": {
-                    "id": user["id"],
-                    "username": user["username"],
-                    "email": user["email"],
+            if self.verificar_contrasena(contrasena, usuario["contrasena"]):
+                return {"exito": True, "usuario": {
+                    "id": usuario["id"],
+                    "nombre_usuario": usuario["nombre_usuario"],
+                    "email": usuario["email"],
                 }}
-            return {"success": False, "message": "Contraseña incorrecta"}
+            return {"exito": False, "mensaje": "Contraseña incorrecta"}
         except Exception as e:
-            return {"success": False, "message": str(e)}
+            return {"exito": False, "mensaje": str(e)}
 
-    def add_habit(self, user_id, titulo):
+    # =================== MÉTODOS DE HÁBITOS ===================
+    def crear_habito(self, usuario_id, nombre, descripcion="", objetivo_minutos=30, categoria="Salud"):
         try:
+            # Mapear categoría a icono y color
+            mapeo_categorias = {
+                "Salud": {"icono": "dumbbell", "color": "#10b981"},
+                "Aprendizaje": {"icono": "book-open", "color": "#3b82f6"},
+                "Productividad": {"icono": "trending-up", "color": "#f59e0b"},
+                "Bienestar": {"icono": "leaf", "color": "#06b6d4"}
+            }
+            
+            categoria_info = mapeo_categorias.get(categoria, {"icono": "checkbox-blank-circle", "color": "#3b82f6"})
+            
             self.cursor.execute("""
-                INSERT INTO habitos (user_id, titulo)
-                VALUES (%s, %s)
-                RETURNING id, titulo, fecha_crea
-            """, (user_id, titulo))
-            habit = self.cursor.fetchone()
+                INSERT INTO habitos (usuario_id, nombre, descripcion, objetivo_diario_minutos, categoria, icono, color)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                RETURNING id, nombre, descripcion, objetivo_diario_minutos, categoria, icono, color, fecha_creacion
+            """, (usuario_id, nombre, descripcion, objetivo_minutos, categoria, categoria_info["icono"], categoria_info["color"]))
+            
+            habito = self.cursor.fetchone()
+            
+            # Crear recordatorio por defecto
+            self.cursor.execute("""
+                INSERT INTO recordatorios (habito_id)
+                VALUES (%s)
+            """, (habito['id'],))
+            
             self.conn.commit()
-            return habit
+            return habito
+            
         except Exception as e:
             self.conn.rollback()
-            print(f"Error guardando hábito: {e}")
+            print(f"Error creando hábito: {e}")
             return None
 
-    def get_user_habits(self, user_id):
+    def obtener_habitos_usuario(self, usuario_id):
         try:
             self.cursor.execute("""
-                SELECT id, titulo
-                FROM habitos
-                WHERE user_id=%s
-                ORDER BY id DESC
-            """, (user_id,))
-            return self.cursor.fetchall()
+                SELECT h.*, 
+                    COUNT(s.id) as total_sesiones,
+                    COALESCE(SUM(s.duracion_segundos), 0) as total_segundos,
+                    COALESCE(MAX(s.fecha), h.fecha_creacion::date) as ultima_sesion
+                FROM habitos h
+                LEFT JOIN sesiones s ON h.id = s.habito_id
+                WHERE h.usuario_id = %s
+                GROUP BY h.id
+                ORDER BY h.id DESC
+            """, (usuario_id,))
+            
+            habitos = self.cursor.fetchall()
+            
+            # Calcular rachas para cada hábito
+            for habito in habitos:
+                racha = self.calcular_racha_habito(habito['id'])
+                habito['racha_dias'] = racha
+            
+            return habitos
+            
         except Exception as e:
             print(f"Error obteniendo hábitos: {e}")
             return []
 
-    def update_habit_titulo(self, habito_id, new_titulo):
-        try:
-            self.cursor.execute(
-                "UPDATE habitos SET titulo=%s WHERE id=%s",
-                (new_titulo, habito_id)
-            )
-            self.conn.commit()
-            return {"success": True}
-        except Exception as e:
-            self.conn.rollback()
-            return {"success": False, "message": str(e)}
-
-    def update_habit_title(self, habito_id, new_titulo):  # Alias para compatibilidad
-        return self.update_habit_titulo(habito_id, new_titulo)
-
-    def marcar_habito(self, habito_id):
+    def obtener_habito_por_id(self, habito_id):
         try:
             self.cursor.execute("""
-                INSERT INTO progreso_habitos (habito_id, fecha, realizadas)
-                VALUES (%s, CURRENT_DATE, TRUE)
-                ON CONFLICT (habito_id, fecha)
-                DO UPDATE SET realizadas = TRUE
+                SELECT h.*, 
+                    COUNT(s.id) as total_sesiones,
+                    COALESCE(SUM(s.duracion_segundos), 0) as total_segundos
+                FROM habitos h
+                LEFT JOIN sesiones s ON h.id = s.habito_id
+                WHERE h.id = %s
+                GROUP BY h.id
             """, (habito_id,))
+            
+            habito = self.cursor.fetchone()
+            
+            if habito:
+                # Calcular estadísticas adicionales
+                habito['racha_dias'] = self.calcular_racha_habito(habito_id)
+                habito['promedio_minutos'] = self.calcular_promedio_minutos(habito_id)
+                habito['minutos_hoy'] = self.obtener_minutos_hoy(habito_id)
+            
+            return habito
+            
+        except Exception as e:
+            print(f"Error obteniendo hábito: {e}")
+            return None
+
+    def eliminar_habito(self, habito_id):
+        try:
+            self.cursor.execute("DELETE FROM habitos WHERE id = %s", (habito_id,))
             self.conn.commit()
             return True
         except Exception as e:
-            print(f"Error marcando hábito: {e}")
             self.conn.rollback()
+            print(f"Error eliminando hábito: {e}")
             return False
 
-    def get_daily_progress(self, user_id):
+    # =================== MÉTODOS DE SESIONES ===================
+    def registrar_sesion(self, habito_id, duracion_segundos, hora_inicio=None, hora_fin=None, notas=""):
         try:
-            self.cursor.execute("SELECT COUNT(*) AS n FROM habitos WHERE user_id=%s", (user_id,))
-            total = self.cursor.fetchone()["n"]
-
+            if hora_inicio is None:
+                hora_inicio = datetime.now()
+            
             self.cursor.execute("""
-                SELECT COUNT(*) AS n
-                FROM habitos h
-                JOIN progreso_habitos p ON h.id=p.habito_id
-                WHERE h.user_id=%s AND p.fecha=CURRENT_DATE AND p.realizadas IS TRUE
-            """, (user_id,))
-            completed = self.cursor.fetchone()["n"]
-            return total, completed
-        except Exception:
-            return 0, 0
+                INSERT INTO sesiones (habito_id, fecha, hora_inicio, hora_fin, duracion_segundos, notas)
+                VALUES (%s, CURRENT_DATE, %s, %s, %s, %s)
+                RETURNING id
+            """, (habito_id, hora_inicio, hora_fin, duracion_segundos, notas))
+            
+            sesion = self.cursor.fetchone()
+            self.conn.commit()
+            
+            return sesion
+            
+        except Exception as e:
+            self.conn.rollback()
+            print(f"Error registrando sesión: {e}")
+            return None
 
-    def close(self):
+    def obtener_sesiones_habito(self, habito_id, limite=7):
+        try:
+            self.cursor.execute("""
+                SELECT fecha, duracion_segundos, hora_inicio, hora_fin, notas
+                FROM sesiones
+                WHERE habito_id = %s
+                ORDER BY fecha DESC
+                LIMIT %s
+            """, (habito_id, limite))
+            
+            return self.cursor.fetchall()
+            
+        except Exception as e:
+            print(f"Error obteniendo sesiones: {e}")
+            return []
+
+    def obtener_minutos_hoy(self, habito_id):
+        try:
+            self.cursor.execute("""
+                SELECT SUM(duracion_segundos) as total_segundos
+                FROM sesiones
+                WHERE habito_id = %s AND fecha = CURRENT_DATE
+            """, (habito_id,))
+            
+            resultado = self.cursor.fetchone()
+            if resultado and resultado['total_segundos']:
+                return resultado['total_segundos'] // 60
+            return 0
+            
+        except Exception as e:
+            print(f"Error obteniendo minutos hoy: {e}")
+            return 0
+
+    # =================== MÉTODOS DE ESTADÍSTICAS ===================
+    def calcular_racha_habito(self, habito_id):
+        try:
+            self.cursor.execute("""
+                SELECT fecha FROM sesiones 
+                WHERE habito_id = %s 
+                ORDER BY fecha DESC
+                LIMIT 7
+            """, (habito_id,))
+            
+            sesiones = self.cursor.fetchall()
+            
+            if not sesiones:
+                return 0
+            
+            hoy = datetime.now().date()
+            racha = 0
+            
+            # Verificar si hoy hubo sesión
+            if sesiones[0]['fecha'] == hoy:
+                racha = 1
+                # Verificar días consecutivos anteriores
+                for i in range(1, len(sesiones)):
+                    fecha_esperada = hoy - timedelta(days=i)
+                    if sesiones[i]['fecha'] == fecha_esperada:
+                        racha += 1
+                    else:
+                        break
+            
+            return racha
+            
+        except Exception as e:
+            print(f"Error calculando racha: {e}")
+            return 0
+
+    def calcular_promedio_minutos(self, habito_id):
+        try:
+            self.cursor.execute("""
+                SELECT AVG(duracion_segundos) as promedio_segundos
+                FROM sesiones
+                WHERE habito_id = %s
+            """, (habito_id,))
+            
+            resultado = self.cursor.fetchone()
+            if resultado and resultado['promedio_segundos']:
+                return int(resultado['promedio_segundos'] // 60)
+            return 0
+            
+        except Exception as e:
+            print(f"Error calculando promedio: {e}")
+            return 0
+
+# En la clase BaseDatos, añade este método:
+
+    def obtener_estadisticas_usuario(self, usuario_id):
+        try:
+            self.cursor.execute("""
+                SELECT 
+                    COUNT(DISTINCT h.id) as total_habitos,
+                    COUNT(DISTINCT s.id) as total_sesiones,
+                    COALESCE(SUM(s.duracion_segundos), 0) as total_segundos
+                FROM habitos h
+                LEFT JOIN sesiones s ON h.id = s.habito_id
+                WHERE h.usuario_id = %s
+            """, (usuario_id,))
+            
+            stats = self.cursor.fetchone()
+            
+            if not stats:
+                return {
+                    'total_habitos': 0,
+                    'total_sesiones': 0,
+                    'total_segundos': 0,
+                    'racha_total': 0
+                }
+            
+            # Calcular racha total
+            racha_total = self.calcular_racha_total(usuario_id)
+            
+            return {
+                'total_habitos': stats['total_habitos'],
+                'total_sesiones': stats['total_sesiones'],
+                'total_segundos': stats['total_segundos'],
+                'racha_total': racha_total
+            }
+            
+        except Exception as e:
+            print(f"Error obteniendo estadísticas: {e}")
+            return {
+                'total_habitos': 0,
+                'total_sesiones': 0,
+                'total_segundos': 0,
+                'racha_total': 0
+            }
+        
+    def calcular_racha_total(self, usuario_id):
+        try:
+            self.cursor.execute("""
+                SELECT DISTINCT s.fecha 
+                FROM sesiones s
+                JOIN habitos h ON s.habito_id = h.id
+                WHERE h.usuario_id = %s
+                ORDER BY s.fecha DESC
+                LIMIT 7
+            """, (usuario_id,))
+            
+            fechas_sesiones = self.cursor.fetchall()
+            
+            if not fechas_sesiones:
+                return 0
+            
+            hoy = datetime.now().date()
+            racha = 0
+            
+            # Verificar si hoy hubo sesión
+            if fechas_sesiones[0]['fecha'] == hoy:
+                racha = 1
+                # Verificar días consecutivos anteriores
+                for i in range(1, len(fechas_sesiones)):
+                    fecha_esperada = hoy - timedelta(days=i)
+                    if fechas_sesiones[i]['fecha'] == fecha_esperada:
+                        racha += 1
+                    else:
+                        break
+            
+            return racha
+            
+        except Exception as e:
+            print(f"Error calculando racha total: {e}")
+            return 0
+
+    # =================== MÉTODOS DE RECORDATORIOS ===================
+    def actualizar_recordatorio(self, habito_id, activo, hora_inicio=None, hora_fin=None):
+        try:
+            self.cursor.execute("""
+                UPDATE recordatorios 
+                SET activo = %s, hora_inicio = %s, hora_fin = %s
+                WHERE habito_id = %s
+            """, (activo, hora_inicio, hora_fin, habito_id))
+            self.conn.commit()
+            return True
+        except Exception as e:
+            self.conn.rollback()
+            print(f"Error actualizando recordatorio: {e}")
+            return False
+
+    def obtener_recordatorio(self, habito_id):
+        try:
+            self.cursor.execute("""
+                SELECT activo, hora_inicio, hora_fin
+                FROM recordatorios
+                WHERE habito_id = %s
+            """, (habito_id,))
+            return self.cursor.fetchone()
+        except Exception as e:
+            print(f"Error obteniendo recordatorio: {e}")
+            return None
+
+    def cerrar_conexion(self):
         self.cursor.close()
         self.conn.close()
+        print("Conexión cerrada")
