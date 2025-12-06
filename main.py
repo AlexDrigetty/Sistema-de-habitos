@@ -19,9 +19,9 @@ class HabitTrackerApp(MDApp):
         
         try:
             self.base_datos = BaseDatos()
-            print("✅ Base de datos conectada")
+            print("Base de datos conectada")
         except Exception as e:
-            print(f"❌ No se pudo conectar a la base de datos: {e}")
+            print(f" No se pudo conectar a la base de datos: {e}")
             exit(1)
         
         self.usuario_actual = None
@@ -36,12 +36,12 @@ class HabitTrackerApp(MDApp):
             
             if os.path.exists(ruta_fuente):
                 LabelBase.register(name="MaterialDesignIcons", fn_regular=ruta_fuente)
-                print("✅ Fuente de iconos registrada")
+                print("Fuente de iconos registrada")
             else:
-                print("⚠️ No se encontró la fuente de iconos")
+                print("No se encontró la fuente de iconos")
                 # Usar iconos de texto si no hay fuente
         except Exception as e:
-            print(f"⚠️ Error al registrar fuente: {e}")
+            print(f"Error al registrar fuente: {e}")
         
         self.theme_cls.theme_style = "Dark"
         self.theme_cls.primary_palette = "Teal"
